@@ -86,7 +86,7 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
                 $(window).trigger('resize');
             }, 100);
             this.loadXYZWidget();
-            this.loadGRBLWidget();
+            // this.loadGRBLWidget();
 
         },
         /**
