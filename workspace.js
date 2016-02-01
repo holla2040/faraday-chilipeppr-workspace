@@ -22,10 +22,10 @@ cprequire_test(["inline:com-hollabaugh-faraday-chilipeppr-workspace"], function(
         );
     };
     loadFlashMsg();
-        
+
     // Init workspace
     ws.init();
-    
+
     // Do some niceties for testing like margins on widget and title for browser
     $('title').html("Faraday Workspace");
     $('body').css('padding', '10px');
@@ -65,23 +65,28 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
             this.loadSpjsWidget();
             // Most workspaces will instantiate the Serial Port Console widget
             this.loadConsoleWidget(function() {
-                setTimeout(function() { $(window).trigger('resize'); }, 100);
+                setTimeout(function() {
+                    $(window).trigger('resize');
+                }, 100);
             });
-            
+
             this.loadTemplateWidget();
-            
+
             // Create our workspace upper right corner triangle menu
             this.loadWorkspaceMenu();
             // Add our billboard to the menu (has name, url, picture of workspace)
             this.addBillboardToWorkspaceMenu();
-            
+
             // Setup an event to react to window resize. This helps since
             // some of our widgets have a manual resize to cleanly fill
             // the height of the browser window. You could turn this off and
             // just set widget min-height in CSS instead
             this.setupResize();
-            setTimeout(function() { $(window).trigger('resize'); }, 100);
+            setTimeout(function() {
+                $(window).trigger('resize');
+            }, 100);
             this.loadXYZWidget();
+            this.loadGRBLWidget();
 
         },
         /**
@@ -164,7 +169,7 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
                         //spjs.consoleToggle();
 
                         that.widgetSpjs - spjs;
-                        
+
                         if (callback) callback(spjs);
 
                     });
@@ -187,7 +192,7 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
                             // Callback that is passed reference to your newly loaded widget
                             console.log("My Console widget just got loaded.", mywidget);
                             that.widgetConsole = mywidget;
-                            
+
                             // init the serial port console
                             // 1st param tells the console to use "single port mode" which
                             // means it will only show data for the green selected serial port
@@ -222,198 +227,233 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
                             that,
                             "Workspace"
                         );
-                        
+
                         if (callback) callback();
                     });
                 }
             );
         },
-        
-           loadXYZWidget: function(callback) {
-     
-          //Axes Widget XYZA
-    //This widget is locked at version 97 until upgrades can be tested with the override code.
-    chilipeppr.load(
-        "com-chilipeppr-xyz",
-        "http://fiddle.jshell.net/chilipeppr/gh45j/97/show/light/",
 
-    function () {
-        cprequire(
-        ["inline:com-chilipeppr-widget-xyz"],
+        loadXYZWidget: function(callback) {
 
-        function (xyz) {
-            //overwrite the G28 homing process with grbl's $H homing
-            var oldHomeAxis = xyz.homeAxis.bind(xyz);
-            var newHomeAxis = function (data) {
-                var cmd = "$H\n";
-                console.log(cmd);
-                chilipeppr.publish("/com-chilipeppr-widget-serialport/send", cmd);
+            //Axes Widget XYZA
+            //This widget is locked at version 97 until upgrades can be tested with the override code.
+            chilipeppr.load(
+                "com-chilipeppr-xyz",
+                "http://fiddle.jshell.net/chilipeppr/gh45j/97/show/light/",
 
-            };
-            var oldSendDone = xyz.sendDone.bind(xyz);
-            var newSendDone = function (data) {
-                   
-            };
-            xyz.homeAxis = newHomeAxis;
-            xyz.sendDone = newSendDone;
-         
-            xyz.updateAxesFromStatus = function (axes) {
-                console.log("updateAxesFromStatus:", axes);
-                
-                var coords = {x:null, y:null, z:null} //create local object to edit
-                
-                //first, we may need to convert units to match 3d viewer
-                if(axes.unit == "mm" && xyz.currentUnits === "inch"){
-                    coords.x = (axes.x / 25.4).toFixed(3);
-                    coords.y = (axes.y / 25.4).toFixed(3);
-                    coords.z = (axes.z / 25.4).toFixed(3);
-                } else if(axes.unit == "inch" && xyz.currentUnits === "mm"){
-                    coords.x = (axes.x * 25.4).toFixed(3);
-                    coords.y = (axes.y * 25.4).toFixed(3);
-                    coords.z = (axes.z * 25.4).toFixed(3);
-                } else{
-                    coords.x = axes.x;
-                    coords.y = axes.y;
-                    coords.z = axes.z;
-                }
-                
-                if ('x' in coords && coords.x != null) {
-                    xyz.updateAxis("x", coords.x);
-                }
-                if ('y' in coords && coords.y != null) {
-                    xyz.updateAxis("y", coords.y);
-                }
-                if ('z' in coords && coords.z != null) {
-                    xyz.updateAxis("z", coords.z);
-                }
-                if ('a' in coords && coords.a != null) {
-                    xyz.updateAxis("a", coords.a);
-                }
-            };
-            
-            xyz.init();
-            
-            chilipeppr.unsubscribe('/com-chilipeppr-widget-3dviewer/unitsChanged', xyz.updateUnitsFromStatus);
-            
-            //remove wcs until it is fully baked
-            $('.btnToggleShowWcs').hide();            
-            xyz.setupShowHideWcsBtn = function(){ };
-            
-            $('#com-chilipeppr-widget-xyz-ftr .joggotozero').attr("data-content", "G0 X0 Y0 Z0<br/>If you need to go to X0 Y0 first and then Z0, you can use the menus on the axes above.");
-            
-            //bind the zero out button to G92 instead of G28
-            $('#com-chilipeppr-widget-xyz-ftr .jogzeroout').unbind("click");
-            $('#com-chilipeppr-widget-xyz-ftr .jogzeroout').click("xyz", xyz.zeroOutAxisG92.bind(xyz));
-            $('#com-chilipeppr-widget-xyz-ftr .jogzeroout').attr("data-content","G92 X0 Y0 Z0 - Temporary offsets will be lost with grbl soft reset (ctrl+x) or when an M2 or M30 command is executed");
-            
-            //update homing pop-up
-            $('#com-chilipeppr-widget-xyz-ftr .joghome').attr("data-content", "$H homing cycle - Must have limit switches and homing enabled in GRBL settings");
-            
-            //clean up drop down lists (z)
-            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[9].remove();
-            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[8].remove();
-            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[4].remove();
-            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[3].remove();
-            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[2].remove();
-            //clean up drop down lists (y)
-            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[9].remove();
-            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[8].remove();
-            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[4].remove();
-            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[3].remove();
-            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[2].remove();
-            //clean up drop down lists (x)
-            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[9].remove();
-            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[8].remove();
-            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[4].remove();
-            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[3].remove();
-            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[2].remove();
-            
-            //remove A axis toggle option
-            $('#com-chilipeppr-widget-xyz .showhideaaxis').remove();
-            
-            //Port the inches/mm code to grbl workspace - change to work with grbl
-            
-            //$('#com-chilipeppr-widget-xyz .btnInMm').unbind("click");
-            //$('#com-chilipeppr-widget-xyz .btnInMm').click(xyz.toggleInMm.bind(xyz));
-            
-            //remove existing keydown/keyup commands for jogging -- will replace these with our own keypress function
-            $('#com-chilipeppr-widget-xyz-ftr').unbind("keydown");
-            $('#com-chilipeppr-widget-xyz-ftr').unbind("keyup");
-            
-            //create the keypress function
-            var that = xyz;
-            $('#com-chilipeppr-widget-xyz-ftr').keydown(function (evt){
-                if (that.isInCustomMenu) {
-                    console.log("custom menu showing. not doing jog.");
-                    return true;
-                }
-                
-                that.accelBaseValHilite(evt);
-                
-                // if this keydown event does not contain a relevant keypress then just exit
-                if (!(evt.which > 30 && evt.which < 41)) {
-                    console.log("exiting cuz not arrow key. evt:", evt);
-                    return;
-                } else {
-                    //console.log("evt:", evt);
-                }
-                
-                var key = evt.which;
-                var direction = null;
-                
-                if (key == 38) {
-                    // up arrow. Y+
-                    direction = "Y+";
-                    $('#com-chilipeppr-widget-xyz-ftr .jogy').addClass("hilite");
-                    setTimeout(function () { 
-                        $('#com-chilipeppr-widget-xyz-ftr .jogy').removeClass('hilite');
-                    }, 100);
-                } else if (key == 40) {
-                    // down arrow. Y-
-                    direction = "Y-";
-                    $('#com-chilipeppr-widget-xyz-ftr .jogyneg').addClass("hilite");
-                    setTimeout(function () { 
-                        $('#com-chilipeppr-widget-xyz-ftr .jogyneg').removeClass('hilite');
-                    }, 100);
-                } else if (key == 37) {
-                    direction = "X-";
-                    $('#com-chilipeppr-widget-xyz-ftr .jogxneg').addClass("hilite");
-                    setTimeout(function () { 
-                        $('#com-chilipeppr-widget-xyz-ftr .jogxneg').removeClass('hilite');
-                    }, 100);
-                } else if (key == 39) {
-                    direction = "X+";
-                    $('#com-chilipeppr-widget-xyz-ftr .jogx').addClass("hilite");
-                    setTimeout(function () { 
-                        $('#com-chilipeppr-widget-xyz-ftr .jogx').removeClass('hilite');
-                    }, 100);
-                } else if (key == 33) {
-                    // page up
-                    direction = "Z+";
-                    $('#com-chilipeppr-widget-xyz-ftr .jogz').addClass("hilite");
-                    setTimeout(function () { 
-                        $('#com-chilipeppr-widget-xyz-ftr .jogz').removeClass('hilite');
-                    }, 100);
-                } else if (key == 34) {
-                    // page down
-                    direction = "Z-";
-                    $('#com-chilipeppr-widget-xyz-ftr .jogzneg').addClass("hilite");
-                    setTimeout(function () { 
-                        $('#com-chilipeppr-widget-xyz-ftr .jogzneg').removeClass('hilite');
-                    }, 100);
-                }
+                function() {
+                    cprequire(
+                        ["inline:com-chilipeppr-widget-xyz"],
 
-                if (direction) {
-                    //that.jog(direction, isFast, is100xFast, is1000xFast, is10000xFast);
-                    that.jog(direction);
-                }
-            });
-            // when key is up, we're done jogging
-            $('#com-chilipeppr-widget-xyz-ftr').keyup(function (evt) {
-                that.accelBaseValUnhilite();
-            });
-        });
-    });
-           }}
+                        function(xyz) {
+                            //overwrite the G28 homing process with grbl's $H homing
+                            var oldHomeAxis = xyz.homeAxis.bind(xyz);
+                            var newHomeAxis = function(data) {
+                                var cmd = "$H\n";
+                                console.log(cmd);
+                                chilipeppr.publish("/com-chilipeppr-widget-serialport/send", cmd);
+
+                            };
+                            var oldSendDone = xyz.sendDone.bind(xyz);
+                            var newSendDone = function(data) {
+
+                            };
+                            xyz.homeAxis = newHomeAxis;
+                            xyz.sendDone = newSendDone;
+
+                            xyz.updateAxesFromStatus = function(axes) {
+                                console.log("updateAxesFromStatus:", axes);
+
+                                var coords = {
+                                        x: null,
+                                        y: null,
+                                        z: null
+                                    } //create local object to edit
+
+                                //first, we may need to convert units to match 3d viewer
+                                if (axes.unit == "mm" && xyz.currentUnits === "inch") {
+                                    coords.x = (axes.x / 25.4).toFixed(3);
+                                    coords.y = (axes.y / 25.4).toFixed(3);
+                                    coords.z = (axes.z / 25.4).toFixed(3);
+                                }
+                                else if (axes.unit == "inch" && xyz.currentUnits === "mm") {
+                                    coords.x = (axes.x * 25.4).toFixed(3);
+                                    coords.y = (axes.y * 25.4).toFixed(3);
+                                    coords.z = (axes.z * 25.4).toFixed(3);
+                                }
+                                else {
+                                    coords.x = axes.x;
+                                    coords.y = axes.y;
+                                    coords.z = axes.z;
+                                }
+
+                                if ('x' in coords && coords.x != null) {
+                                    xyz.updateAxis("x", coords.x);
+                                }
+                                if ('y' in coords && coords.y != null) {
+                                    xyz.updateAxis("y", coords.y);
+                                }
+                                if ('z' in coords && coords.z != null) {
+                                    xyz.updateAxis("z", coords.z);
+                                }
+                                if ('a' in coords && coords.a != null) {
+                                    xyz.updateAxis("a", coords.a);
+                                }
+                            };
+
+                            xyz.init();
+
+                            chilipeppr.unsubscribe('/com-chilipeppr-widget-3dviewer/unitsChanged', xyz.updateUnitsFromStatus);
+
+                            //remove wcs until it is fully baked
+                            $('.btnToggleShowWcs').hide();
+                            xyz.setupShowHideWcsBtn = function() {};
+
+                            $('#com-chilipeppr-widget-xyz-ftr .joggotozero').attr("data-content", "G0 X0 Y0 Z0<br/>If you need to go to X0 Y0 first and then Z0, you can use the menus on the axes above.");
+
+                            //bind the zero out button to G92 instead of G28
+                            $('#com-chilipeppr-widget-xyz-ftr .jogzeroout').unbind("click");
+                            $('#com-chilipeppr-widget-xyz-ftr .jogzeroout').click("xyz", xyz.zeroOutAxisG92.bind(xyz));
+                            $('#com-chilipeppr-widget-xyz-ftr .jogzeroout').attr("data-content", "G92 X0 Y0 Z0 - Temporary offsets will be lost with grbl soft reset (ctrl+x) or when an M2 or M30 command is executed");
+
+                            //update homing pop-up
+                            $('#com-chilipeppr-widget-xyz-ftr .joghome').attr("data-content", "$H homing cycle - Must have limit switches and homing enabled in GRBL settings");
+
+                            //clean up drop down lists (z)
+                            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[9].remove();
+                            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[8].remove();
+                            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[4].remove();
+                            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[3].remove();
+                            $("#com-chilipeppr-widget-xyz-z .dropdown-menu li")[2].remove();
+                            //clean up drop down lists (y)
+                            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[9].remove();
+                            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[8].remove();
+                            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[4].remove();
+                            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[3].remove();
+                            $("#com-chilipeppr-widget-xyz-y .dropdown-menu li")[2].remove();
+                            //clean up drop down lists (x)
+                            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[9].remove();
+                            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[8].remove();
+                            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[4].remove();
+                            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[3].remove();
+                            $("#com-chilipeppr-widget-xyz-x .dropdown-menu li")[2].remove();
+
+                            //remove A axis toggle option
+                            $('#com-chilipeppr-widget-xyz .showhideaaxis').remove();
+
+                            //Port the inches/mm code to grbl workspace - change to work with grbl
+
+                            //$('#com-chilipeppr-widget-xyz .btnInMm').unbind("click");
+                            //$('#com-chilipeppr-widget-xyz .btnInMm').click(xyz.toggleInMm.bind(xyz));
+
+                            //remove existing keydown/keyup commands for jogging -- will replace these with our own keypress function
+                            $('#com-chilipeppr-widget-xyz-ftr').unbind("keydown");
+                            $('#com-chilipeppr-widget-xyz-ftr').unbind("keyup");
+
+                            //create the keypress function
+                            var that = xyz;
+                            $('#com-chilipeppr-widget-xyz-ftr').keydown(function(evt) {
+                                if (that.isInCustomMenu) {
+                                    console.log("custom menu showing. not doing jog.");
+                                    return true;
+                                }
+
+                                that.accelBaseValHilite(evt);
+
+                                // if this keydown event does not contain a relevant keypress then just exit
+                                if (!(evt.which > 30 && evt.which < 41)) {
+                                    console.log("exiting cuz not arrow key. evt:", evt);
+                                    return;
+                                }
+                                else {
+                                    //console.log("evt:", evt);
+                                }
+
+                                var key = evt.which;
+                                var direction = null;
+
+                                if (key == 38) {
+                                    // up arrow. Y+
+                                    direction = "Y+";
+                                    $('#com-chilipeppr-widget-xyz-ftr .jogy').addClass("hilite");
+                                    setTimeout(function() {
+                                        $('#com-chilipeppr-widget-xyz-ftr .jogy').removeClass('hilite');
+                                    }, 100);
+                                }
+                                else if (key == 40) {
+                                    // down arrow. Y-
+                                    direction = "Y-";
+                                    $('#com-chilipeppr-widget-xyz-ftr .jogyneg').addClass("hilite");
+                                    setTimeout(function() {
+                                        $('#com-chilipeppr-widget-xyz-ftr .jogyneg').removeClass('hilite');
+                                    }, 100);
+                                }
+                                else if (key == 37) {
+                                    direction = "X-";
+                                    $('#com-chilipeppr-widget-xyz-ftr .jogxneg').addClass("hilite");
+                                    setTimeout(function() {
+                                        $('#com-chilipeppr-widget-xyz-ftr .jogxneg').removeClass('hilite');
+                                    }, 100);
+                                }
+                                else if (key == 39) {
+                                    direction = "X+";
+                                    $('#com-chilipeppr-widget-xyz-ftr .jogx').addClass("hilite");
+                                    setTimeout(function() {
+                                        $('#com-chilipeppr-widget-xyz-ftr .jogx').removeClass('hilite');
+                                    }, 100);
+                                }
+                                else if (key == 33) {
+                                    // page up
+                                    direction = "Z+";
+                                    $('#com-chilipeppr-widget-xyz-ftr .jogz').addClass("hilite");
+                                    setTimeout(function() {
+                                        $('#com-chilipeppr-widget-xyz-ftr .jogz').removeClass('hilite');
+                                    }, 100);
+                                }
+                                else if (key == 34) {
+                                    // page down
+                                    direction = "Z-";
+                                    $('#com-chilipeppr-widget-xyz-ftr .jogzneg').addClass("hilite");
+                                    setTimeout(function() {
+                                        $('#com-chilipeppr-widget-xyz-ftr .jogzneg').removeClass('hilite');
+                                    }, 100);
+                                }
+
+                                if (direction) {
+                                    //that.jog(direction, isFast, is100xFast, is1000xFast, is10000xFast);
+                                    that.jog(direction);
+                                }
+                            });
+                            // when key is up, we're done jogging
+                            $('#com-chilipeppr-widget-xyz-ftr').keyup(function(evt) {
+                                that.accelBaseValUnhilite();
+                            });
+                        });
+                });
+        },
+
+        loadGRBLWidget: function(callback) {
+            // GRBL
+            // http://jsfiddle.net/jarret/b5L2rtgc/ //alternate test version of grbl controller
+            // com-chilipeppr-grbl
+            chilipeppr.load(
+                "com-chilipeppr-grbl",
+                "http://fiddle.jshell.net/jarret/9aaL8jg4/show/light/",
+
+                function() {
+                    cprequire(
+                        ["inline:com-chilipeppr-widget-grbl"], //"inline:com-chilipeppr-widget-spconsole"],
+                        //, "inline:com-chilipeppr-serialport-spselector"],
+
+                        function(grbl) { //,spconsole) {
+
+                            grbl.init();
+
+                        });
+                });
+        }
+
+    }
 
 });
