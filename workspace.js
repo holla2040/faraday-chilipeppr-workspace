@@ -45,6 +45,8 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
         fiddleurl: "(auto fill by runme.js)", // The edit URL. This can be auto-filled by runme.js in Cloud9 if you'd like, or just define it on your own to help people know where they can edit/fork your widget
         githuburl: "(auto fill by runme.js)", // The backing github repo
         testurl: "(auto fill by runme.js)", // The standalone working widget so can view it working by itself
+        switchesLast:"000>",
+        
         /**
          * Contains reference to the Console widget object. Hang onto the reference
          * so we can resize it when the window resizes because we want it to manually
@@ -59,8 +61,9 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
          * The workspace's init method. It loads the all the widgets contained in the workspace
          * and inits them.
          */
+         self: null,
         init: function() {
-
+            this.switchesLast = "000>";
             // Most workspaces will instantiate the Serial Port JSON Server widget
             this.loadSpjsWidget();
             // Most workspaces will instantiate the Serial Port Console widget
@@ -70,7 +73,7 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
                 }, 100);
             });
 
-            this.loadTemplateWidget();
+            //this.loadTemplateWidget();
 
             // Create our workspace upper right corner triangle menu
             this.loadWorkspaceMenu();
@@ -87,11 +90,48 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
             }, 100);
             // this.loadXYZWidget();
             // this.loadGRBLWidget();
-            chilipeppr.subscribe("/com-chilipeppr-widget-serialport/recvline",function(line) {console.log(">>>>>>>>>>>>>>>>>>>>>>> "+line.dataline)});
+            
+            self = this;
+            
+            chilipeppr.publish("/com-chilipeppr-widget-serialport/send","$10=19"); // turn on limit sw reporting
+            chilipeppr.subscribe("/com-chilipeppr-widget-serialport/recvline",this.statusHandler);
             setInterval(function() {
                 chilipeppr.publish("/com-chilipeppr-widget-serialport/send","?");
-            },3000);
+            },100);
 
+        },
+        statusHandler: function(reply){
+            $('#mywidget2-instance').text(reply.dataline);
+            // <Idle,MPos:0.000,4.000,0.000,WPos:0.000,4.000,0.000,Lim:000>
+            if (reply.dataline[0]=='<'){ // 0 is spindle
+                var switches = reply.dataline.split(":")[3];
+                //console.log(">>>>>>>>>>"+switches+"-----"+self.switchesLast+"))))");
+                if ((switches[0]=='1') && (self.switchesLast[0]=='0')) {
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","~g91f25g1y200\n");
+                }
+                if ((switches[0]=='0') && (self.switchesLast[0] == '1')) {
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","!\n");
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send",String.fromCharCode(24));
+                }
+                
+                if ((switches[1]=='1') && (self.switchesLast[1]=='0')) {
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","~g91f25g1x-100\n");
+                }
+                if ((switches[1]=='0') && (self.switchesLast[1] == '1')) {
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","!\n");
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send",String.fromCharCode(24));
+                }
+                
+                if ((switches[2]=='1') && (self.switchesLast[2]=='0')) {
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","~g91f25g1x100\n");
+                }
+                if ((switches[2]=='0') && (self.switchesLast[2] == '1')) {
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","!\n");
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send",String.fromCharCode(24));
+                }
+                
+                self.switchesLast = switches;
+            }
         },
         /**
          * Returns the billboard HTML, CSS, and Javascript for this Workspace. The billboard
