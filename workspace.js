@@ -101,9 +101,9 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
 
         },
         statusHandler: function(reply){
-            $('#mywidget2-instance').text(reply.dataline);
             // <Idle,MPos:0.000,4.000,0.000,WPos:0.000,4.000,0.000,Lim:000>
             if (reply.dataline[0]=='<'){ // 0 is spindle
+                $('#mywidget2-instance').text(reply.dataline);
                 var switches = reply.dataline.split(":")[3];
                 //console.log(">>>>>>>>>>"+switches+"-----"+self.switchesLast+"))))");
                 if ((switches[0]=='1') && (self.switchesLast[0]=='0')) {
