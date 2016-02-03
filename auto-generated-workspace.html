@@ -178,8 +178,12 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
             setTimeout(function() {
                 $(window).trigger('resize');
             }, 100);
-            this.loadXYZWidget();
+            // this.loadXYZWidget();
             // this.loadGRBLWidget();
+            chilipeppr.subscribe("/com-chilipeppr-widget-serialport/recvline",function(line) {console.log(">>>>>>>>>>>>>>>>>>>>>>> "+line.dataline)});
+            setInterval(function() {
+                chilipeppr.publish("/com-chilipeppr-widget-serialport/send","?");
+            },3000);
 
         },
         /**
