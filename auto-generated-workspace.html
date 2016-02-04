@@ -206,7 +206,7 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
                 }
                 
                 if ((switches[1]=='1') && (this.switchesLast[1]=='0')) {
-                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","~g91f25g1x-100\n");
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","~g91f100g1x-100\n");
                 }
                 if ((switches[1]=='0') && (this.switchesLast[1] == '1')) {
                     chilipeppr.publish("/com-chilipeppr-widget-serialport/send","!\n");
@@ -217,7 +217,7 @@ cpdefine("inline:com-hollabaugh-faraday-chilipeppr-workspace", ["chilipeppr_read
                 }
                 
                 if ((switches[2]=='1') && (this.switchesLast[2]=='0')) {
-                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","~g91f25g1x100\n");
+                    chilipeppr.publish("/com-chilipeppr-widget-serialport/send","~g91f100g1x100\n");
                 }
                 if ((switches[2]=='0') && (this.switchesLast[2] == '1')) {
                     chilipeppr.publish("/com-chilipeppr-widget-serialport/send","!\n");
